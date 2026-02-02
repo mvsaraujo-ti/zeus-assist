@@ -1,0 +1,5 @@
+systems:
+  - name: DigiDoc
+    description: Sistema de tramitação eletrônica de documentos
+    access: Rede interna TJMA
+    support: DTIC - Suporte N1

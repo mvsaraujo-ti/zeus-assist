@@ -1,0 +1,61 @@
+flows:
+  - id: acesso_sistema
+    title: Solicitação de acesso a sistema
+    description: Fluxo padrão para solicitar acesso a sistemas internos do TJMA.
+    keywords:
+      - acesso
+      - solicitar
+      - solicitação
+      - permissão
+      - sistema
+      - login
+    steps:
+      - Abrir chamado no GLPI
+      - Informar nome do sistema desejado
+      - Informar matrícula e setor
+      - Aguardar análise da DTIC
+  - id: acesso_email_indevido
+    title: Solicitação de acesso enviada por e-mail indevido
+    description: >
+      Solicitações de acesso a sistemas do TJMA enviadas por e-mail de unidade,
+      por servidores não autorizados ou fora do fluxo oficial devem ser recusadas.
+    keywords:
+      - acesso
+      - email
+      - e-mail
+      - indevido
+      - solicitacao
+    steps:
+      - Informar que a solicitação é inválida
+      - Orientar que apenas o superior imediato, gestor ou secretário pode solicitar
+      - Solicitar reenvio pelo e-mail institucional pessoal do responsável
+
+  - id: quem_pode_solicitar_acesso
+    title: Quem pode solicitar acesso a sistemas do TJMA
+    description: >
+      Apenas o superior imediato, gestor(a) da unidade ou secretário(a)
+      pode solicitar, alterar ou revogar acessos a sistemas do TJMA.
+    keywords:
+      - quem
+      - pode
+      - solicitar
+      - acesso
+    steps:
+      - Superior imediato
+      - Gestor(a) da unidade
+      - Secretário(a)
+
+  - id: como_solicitar_acesso
+    title: Como solicitar acesso a sistemas do TJMA
+    description: >
+      O pedido deve ser enviado exclusivamente pelo e-mail institucional
+      pessoal do responsável autorizado.
+    keywords:
+      - como
+      - solicitar
+      - acesso
+      - sistema
+    steps:
+      - Enviar e-mail institucional pessoal (@tjma.jus.br)
+      - Informar dados obrigatórios do servidor
+      - Informar sistema e justificativa funcional
