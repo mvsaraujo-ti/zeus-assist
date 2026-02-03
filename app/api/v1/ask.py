@@ -1,28 +1,33 @@
-# app/api/v1/ask.py
+"""
+Ask API — ZEUS
+
+Controller fino com:
+- Guardrails
+- Vault determinístico
+- Renderização desacoplada
+- Camada conversacional
+- ✅ Memória curta de contexto
+"""
 
 from fastapi import APIRouter
 
 from app.schemas.ask import AskRequest, AskResponse
 from app.core.guardrails import validate_question
-from app.services.vault_service import search_flows
-from app.services.ai_service import enhance_answer
+from app.services.vault_service import search
+from app.services.intent_renderer import render_contact
+from app.services.system_renderer import render_system
+from app.services.conversational_service import apply_conversational_layer
+from app.services.context_service import save_context, get_context
 
 router = APIRouter()
 
 
 @router.post("/ask", response_model=AskResponse)
 def ask_zeus(payload: AskRequest):
-    """
-    Endpoint principal do ZEUS.
 
-    Fluxo:
-    1. Aplica guardrails (regras de segurança)
-    2. Busca fluxo relevante no vault (fonte da verdade)
-    3. Usa IA apenas para FORMATAÇÃO da resposta
-    4. Retorna resposta segura
-    """
-
-    # 1️⃣ Guardrails
+    # =====================================================
+    # 1️⃣ GUARDRAILS
+    # =====================================================
     try:
         validate_question(payload.question)
     except ValueError as e:
@@ -31,29 +36,72 @@ def ask_zeus(payload: AskRequest):
             source="rule"
         )
 
-    # 2️⃣ Busca no vault
-    flow = search_flows(payload.question)
+    # =====================================================
+    # 2️⃣ BUSCA NO VAULT
+    # =====================================================
+    result = search(payload.question)
 
-    if flow:
-        answer = flow.get(
-            "description",
-            "Fluxo encontrado na base do ZEUS."
-        )
+    # =====================================================
+    # 3️⃣ SE ACHOU → RESPONDE E SALVA CONTEXTO
+    # =====================================================
+    if result:
+        raw = result.get("raw", {})
+        item_type = result.get("type")
 
-        # Inclui passos, se existirem
-        if flow.get("steps"):
-            steps = "\n".join(f"- {step}" for step in flow["steps"])
-            answer = f"{answer}\n\nPassos:\n{steps}"
+        # Salva contexto para próximas perguntas
+        save_context(item_type, raw)
 
-        # 3️⃣ IA apenas para melhorar a forma do texto
-        formatted_answer = enhance_answer(answer)
+        if item_type == "flow":
+            answer = raw.get("description", "")
+            if raw.get("steps"):
+                steps = "\n".join(f"- {step}" for step in raw["steps"])
+                answer = f"{answer}\n\nPassos:\n{steps}"
+
+        elif item_type == "system":
+            answer = render_system(raw, payload.question)
+
+        elif item_type == "contact":
+            answer = render_contact(raw, payload.question)
+
+        else:
+            answer = "Informação institucional encontrada na base do ZEUS."
+
+        final_answer = apply_conversational_layer(answer)
 
         return AskResponse(
-            answer=formatted_answer,
+            answer=final_answer,
             source="vault"
         )
 
-    # 4️⃣ Fallback seguro
+    # =====================================================
+    # 4️⃣ SE NÃO ACHOU → TENTA MEMÓRIA CURTA
+    # =====================================================
+    context = get_context()
+
+    if context:
+        raw = context["last_raw"]
+        item_type = context["last_type"]
+
+        if item_type == "contact":
+            answer = render_contact(raw, payload.question)
+
+        elif item_type == "system":
+            answer = render_system(raw, payload.question)
+
+        else:
+            answer = None
+
+        if answer:
+            final_answer = apply_conversational_layer(answer)
+
+            return AskResponse(
+                answer=final_answer,
+                source="context"
+            )
+
+    # =====================================================
+    # 5️⃣ FALLBACK FINAL
+    # =====================================================
     return AskResponse(
         answer=(
             "Não encontrei essa informação na base do ZEUS. "

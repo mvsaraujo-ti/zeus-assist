@@ -1,4 +1,38 @@
+# =========================================================
+# CONTATOS INSTITUCIONAIS — ZEUS
+# =========================================================
+# Finalidade:
+# - Informar canais oficiais de atendimento
+# - Apoiar respostas do ZEUS quando envolver suporte humano
+# - NÃO substitui fluxos formais
+# =========================================================
+
 contacts:
-  - sector: DTIC
-    phone: 3216-0000
-    email: dtic@tjma.jus.br
+  - id: dtic
+    sector: Diretoria de Tecnologia da Informação e Comunicação (DTIC)
+
+    # Palavras usadas para identificar este contato
+    keywords:
+      - dtic
+      - tecnologia
+      - informatica
+      - ti
+      - suporte
+
+    # Canais oficiais
+    phone: "(98) 2055-2055"
+    email: informatica@tjma.jus.br
+
+    # Canais digitais (opcional, mas padronizado)
+    channels:
+      whatsapp: Atendimento ao Usuário TJMA
+      telegram: t.me/Atendimento_Informatica_TJMA_bot
+      portal: www.tjma.jus.br/chat-atendimento
+
+    # Horário institucional de atendimento
+    working_hours: "Segunda a sexta, das 7h às 19h (exceto feriados)"
+
+    # Observações institucionais
+    notes: >
+      Atendimento responsável por suporte a sistemas judiciais,
+      administrativos, computadores, e-mail institucional e serviços de TI.

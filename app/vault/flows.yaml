@@ -1,7 +1,19 @@
+# =========================================================
+# FLUXOS INSTITUCIONAIS — ZEUS
+# =========================================================
+# Finalidade:
+# - Responder perguntas do tipo "como fazer"
+# - Representar processos oficiais
+# - NÃO decidir acesso, apenas orientar
+# =========================================================
+
 flows:
   - id: acesso_sistema
-    title: Solicitação de acesso a sistema
-    description: Fluxo padrão para solicitar acesso a sistemas internos do TJMA.
+    title: Solicitação de acesso a sistemas
+    description: >
+      Fluxo padrão para solicitar acesso a sistemas internos do TJMA,
+      conforme normas institucionais vigentes.
+
     keywords:
       - acesso
       - solicitar
@@ -9,53 +21,77 @@ flows:
       - permissão
       - sistema
       - login
+
     steps:
       - Abrir chamado no GLPI
       - Informar nome do sistema desejado
-      - Informar matrícula e setor
-      - Aguardar análise da DTIC
+      - Informar matrícula e setor do servidor
+      - Aguardar análise do setor responsável (DTIC / NHD)
+
+    responsible_sector: DTIC
+    channel: GLPI
+
+
   - id: acesso_email_indevido
     title: Solicitação de acesso enviada por e-mail indevido
     description: >
       Solicitações de acesso a sistemas do TJMA enviadas por e-mail de unidade,
       por servidores não autorizados ou fora do fluxo oficial devem ser recusadas.
+
     keywords:
       - acesso
       - email
       - e-mail
       - indevido
       - solicitacao
+      - inválido
+
     steps:
       - Informar que a solicitação é inválida
-      - Orientar que apenas o superior imediato, gestor ou secretário pode solicitar
+      - Orientar que apenas responsável autorizado pode solicitar
       - Solicitar reenvio pelo e-mail institucional pessoal do responsável
+
+    responsible_sector: DTIC
+    rule_type: invalid_request
+
 
   - id: quem_pode_solicitar_acesso
     title: Quem pode solicitar acesso a sistemas do TJMA
     description: >
-      Apenas o superior imediato, gestor(a) da unidade ou secretário(a)
-      pode solicitar, alterar ou revogar acessos a sistemas do TJMA.
+      Apenas autoridades e responsáveis formais podem solicitar,
+      alterar ou revogar acessos a sistemas do TJMA.
+
     keywords:
       - quem
       - pode
       - solicitar
       - acesso
+      - permissão
+
     steps:
       - Superior imediato
       - Gestor(a) da unidade
       - Secretário(a)
+
+    rule_type: authorization
+
 
   - id: como_solicitar_acesso
     title: Como solicitar acesso a sistemas do TJMA
     description: >
       O pedido deve ser enviado exclusivamente pelo e-mail institucional
       pessoal do responsável autorizado.
+
     keywords:
       - como
       - solicitar
       - acesso
       - sistema
+      - email
+
     steps:
       - Enviar e-mail institucional pessoal (@tjma.jus.br)
       - Informar dados obrigatórios do servidor
       - Informar sistema e justificativa funcional
+
+    channel: email

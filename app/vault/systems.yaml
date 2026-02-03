@@ -1,5 +1,30 @@
+# =========================================================
+# SISTEMAS INSTITUCIONAIS — ZEUS
+# =========================================================
+# Finalidade:
+# - Descrever sistemas oficialmente
+# - Apoiar desambiguação
+# - Base para perfis no futuro
+# =========================================================
+
 systems:
-  - name: DigiDoc
-    description: Sistema de tramitação eletrônica de documentos
-    access: Rede interna TJMA
-    support: DTIC - Suporte N1
+  - id: digidoc
+    name: DigiDoc
+    description: Sistema de tramitação eletrônica de documentos do TJMA.
+
+    keywords:
+      - digidoc
+      - documento
+      - tramitação
+      - protocolo
+
+    access:
+      network: Rede interna TJMA
+      method: Perfil controlado por setor responsável
+
+    support:
+      sector: DTIC
+      level: N1
+
+    notes: >
+      O acesso ao DigiDoc depende da lotação e das atribuições do servidor.
