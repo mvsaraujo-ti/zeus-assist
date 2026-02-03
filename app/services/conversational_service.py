@@ -1,34 +1,36 @@
 """
-Conversational Service (CUX) — ZEUS
+Conversational Service — ZEUS (CUX)
 
 Responsável por:
-- Humanizar respostas institucionais
-- Melhorar tom e acolhimento
-- Manter conforto conversacional
+- Tornar a resposta mais humana e acolhedora
+- Manter tom institucional e profissional
+- NÃO alterar conteúdo factual
+- NÃO decidir respostas
 
-⚠️ NÃO decide conteúdo
-⚠️ NÃO acessa YAML
-⚠️ NÃO altera fatos
-⚠️ NÃO substitui regras
+⚠️ Não acessa Vault
+⚠️ Não cria informações
+⚠️ Não substitui regras
 """
 
-from app.services.ai_service import enhance_answer
-
+import random
 
 # =========================================================
-# 🔹 FRASES INSTITUCIONAIS PADRÃO
+# 🔹 FRASES CONTROLADAS (SEM ALUCINAÇÃO)
 # =========================================================
 
-OPENING_PHRASES = [
-    "Claro, posso te ajudar com isso.",
-    "Sem problema, veja a informação abaixo.",
-    "Aqui está a informação que você solicitou.",
+OPENERS = [
+    "Certo!",
+    "Vamos lá.",
+    "Claro.",
+    "Posso te ajudar com isso.",
+    "Aqui vai:",
 ]
 
-CLOSING_PHRASES = [
-    "Se precisar de mais alguma coisa, é só me dizer.",
-    "Fico à disposição caso precise de mais ajuda.",
-    "Se quiser, posso te orientar sobre o próximo passo.",
+CLOSERS = [
+    "Se precisar de algo mais, é só me avisar.",
+    "Fico à disposição se precisar.",
+    "Caso tenha outra dúvida, é só perguntar.",
+    "",  # permite não fechar sempre
 ]
 
 
@@ -36,54 +38,30 @@ CLOSING_PHRASES = [
 # 🔹 FUNÇÃO PRINCIPAL
 # =========================================================
 
-def apply_conversational_layer(
-    answer: str,
-    *,
-    add_opening: bool = True,
-    add_closing: bool = True,
-    use_ai: bool = True
-) -> str:
+def apply_conversational_layer(answer: str) -> str:
     """
-    Aplica camada conversacional controlada à resposta.
+    Aplica camada conversacional leve ao texto.
 
-    Parâmetros:
-    - answer: texto institucional já pronto
-    - add_opening: adiciona frase de abertura
-    - add_closing: adiciona frase de encerramento
-    - use_ai: permite IA apenas para TOM
-
-    Retorna:
-    - Texto mais humano, sem alterar conteúdo
+    Regras:
+    - Não altera o conteúdo
+    - Não reescreve regras
+    - Apenas envolve o texto com tom humano
     """
-
-    if not answer or not isinstance(answer, str):
+    if not answer:
         return answer
 
+    opener = random.choice(OPENERS)
+    closer = random.choice(CLOSERS)
+
+    # Montagem cuidadosa
     parts = []
 
-    # -----------------------------------------------------
-    # 1️⃣ Abertura institucional (opcional)
-    # -----------------------------------------------------
-    if add_opening:
-        parts.append(OPENING_PHRASES[0])
+    if opener:
+        parts.append(opener)
 
-    # -----------------------------------------------------
-    # 2️⃣ Conteúdo principal (determinístico)
-    # -----------------------------------------------------
     parts.append(answer)
 
-    # -----------------------------------------------------
-    # 3️⃣ Encerramento gentil (opcional)
-    # -----------------------------------------------------
-    if add_closing:
-        parts.append(CLOSING_PHRASES[0])
+    if closer:
+        parts.append(closer)
 
-    final_text = "\n\n".join(parts)
-
-    # -----------------------------------------------------
-    # 4️⃣ IA apenas para TOM (opcional)
-    # -----------------------------------------------------
-    if use_ai:
-        final_text = enhance_answer(final_text)
-
-    return final_text
+    return "\n\n".join(parts)
