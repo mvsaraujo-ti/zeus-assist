@@ -23,20 +23,16 @@ from typing import Optional, List, Dict
 VAULT_PATH = Path(__file__).resolve().parent.parent / "vault"
 
 # Cache simples em memória
-# Reinício do backend limpa o cache
 _VAULT_CACHE: Dict[str, dict] = {}
 
 
 # =========================================================
-# 🔹 LOADERS (LEITURA DE YAML)
+# 🔹 LOADERS
 # =========================================================
 
 def load_vault_file(filename: str) -> dict:
     """
-    Carrega arquivo YAML do vault com cache em memória.
-
-    - Usa yaml.safe_load (segurança)
-    - Nunca lança exceção
+    Carrega um arquivo YAML do vault com cache.
     """
     if filename in _VAULT_CACHE:
         return _VAULT_CACHE[filename]
@@ -53,18 +49,29 @@ def load_vault_file(filename: str) -> dict:
     return data
 
 
+def load_vault_dir(subdir: str) -> List[dict]:
+    """
+    Carrega todos os arquivos YAML de um diretório do vault.
+    """
+    items = []
+    dir_path = VAULT_PATH / subdir
+
+    if not dir_path.exists():
+        return items
+
+    for file in dir_path.glob("*.yaml"):
+        data = load_vault_file(f"{subdir}/{file.name}")
+        if data:
+            items.append(data)
+
+    return items
+
+
 # =========================================================
 # 🔹 NORMALIZAÇÃO DE TEXTO
 # =========================================================
 
 def normalize_text(text: str) -> List[str]:
-    """
-    Normaliza texto para busca previsível.
-
-    Exemplo:
-    "Solicitação de Acesso ao DigiDoc!" →
-    ["solicitação", "de", "acesso", "ao", "digidoc"]
-    """
     if not text:
         return []
 
@@ -74,13 +81,10 @@ def normalize_text(text: str) -> List[str]:
 
 
 # =========================================================
-# 🔹 NORMALIZAÇÃO DOS DADOS DO VAULT
+# 🔹 NORMALIZAÇÃO DOS ITENS
 # =========================================================
 
 def normalize_flows(flows: list) -> list:
-    """
-    Normaliza flows.yaml para o formato interno padrão.
-    """
     items = []
 
     for flow in flows:
@@ -97,9 +101,6 @@ def normalize_flows(flows: list) -> list:
 
 
 def normalize_systems(systems: list) -> list:
-    """
-    Normaliza systems.yaml para o formato interno padrão.
-    """
     items = []
 
     for system in systems:
@@ -116,18 +117,15 @@ def normalize_systems(systems: list) -> list:
 
 
 def normalize_contacts(contacts: list) -> list:
-    """
-    Normaliza contacts.yaml para o formato interno padrão.
-    """
     items = []
 
     for contact in contacts:
         items.append({
             "type": "contact",
             "id": contact.get("id"),
-            "title": contact.get("sector", ""),
+            "title": contact.get("name", ""),
             "keywords": contact.get("keywords", []),
-            "content": contact.get("notes", ""),
+            "content": "",
             "raw": contact
         })
 
@@ -135,34 +133,24 @@ def normalize_contacts(contacts: list) -> list:
 
 
 # =========================================================
-# 🔹 SCORER (FUNÇÃO DE PONTUAÇÃO)
+# 🔹 SCORER
 # =========================================================
 
 def score_item(question_words: List[str], item: dict) -> int:
-    """
-    Calcula score de relevância entre pergunta e item.
-
-    Pesos:
-    - Título: peso 3
-    - Keywords: peso 2
-    - Conteúdo: peso 1
-    """
     score = 0
 
-    # Peso alto para título
-    title_words = normalize_text(item.get("title", ""))
-    for word in title_words:
+    # Título (peso 3)
+    for word in normalize_text(item.get("title", "")):
         if word in question_words:
             score += 3
 
-    # Peso médio para keywords
+    # Keywords (peso 2)
     for kw in item.get("keywords", []):
         if kw.lower() in question_words:
             score += 2
 
-    # Peso leve para conteúdo
-    content_words = normalize_text(item.get("content", ""))
-    for word in content_words:
+    # Conteúdo (peso 1)
+    for word in normalize_text(item.get("content", "")):
         if word in question_words:
             score += 1
 
@@ -174,66 +162,53 @@ def score_item(question_words: List[str], item: dict) -> int:
 # =========================================================
 
 def search(question: str) -> Optional[dict]:
-    """
-    Executa busca unificada no vault.
-
-    Fluxo:
-    1. Normaliza pergunta
-    2. Detecta intenção explícita (ex: contato)
-    3. Carrega YAMLs
-    4. Normaliza dados
-    5. Aplica score
-    6. Retorna melhor item
-    """
     question_words = normalize_text(question)
 
-    # -----------------------------------------------------
-    # 🔹 DETECÇÃO DE INTENÇÃO DE CONTATO
-    # -----------------------------------------------------
+    # ----------------------------
+    # Intenção explícita de contato
+    # ----------------------------
     contact_intent_words = {
         "telefone",
         "fone",
         "email",
         "e-mail",
+        "ramal",
+        "contato",
         "horario",
         "horário",
-        "contato",
     }
 
     is_contact_intent = any(
         word in question_words for word in contact_intent_words
     )
 
-    # -----------------------------------------------------
-    # 🔹 CARREGA DADOS DO VAULT
-    # -----------------------------------------------------
-    flows = load_vault_file("flows.yaml").get("flows", [])
-    systems = load_vault_file("systems.yaml").get("systems", [])
-    contacts = load_vault_file("contacts.yaml").get("contacts", [])
+    # ----------------------------
+    # Carrega dados do vault
+    # ----------------------------
+    flows = load_vault_dir("flows")
+    systems = load_vault_dir("systems")
+    contacts = load_vault_dir("contacts")
 
-    # -----------------------------------------------------
-    # 🔹 SELEÇÃO DE ITENS CONFORME INTENÇÃO
-    # -----------------------------------------------------
+    # ----------------------------
+    # Seleção conforme intenção
+    # ----------------------------
     if is_contact_intent:
-        # Intenção clara → prioriza contatos
         items = normalize_contacts(contacts)
     else:
-        # Busca geral
         items = (
-            normalize_flows(flows)
-            + normalize_systems(systems)
+            normalize_systems(systems)
+            + normalize_flows(flows)
             + normalize_contacts(contacts)
         )
 
-    # -----------------------------------------------------
-    # 🔹 APLICA SCORE
-    # -----------------------------------------------------
+    # ----------------------------
+    # Scoring
+    # ----------------------------
     best_item = None
     best_score = 0
 
     for item in items:
         score = score_item(question_words, item)
-
         if score > best_score:
             best_score = score
             best_item = item

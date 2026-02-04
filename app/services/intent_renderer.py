@@ -3,12 +3,11 @@ Intent Renderer — ZEUS
 
 Responsável por:
 - Detectar intenções específicas na pergunta
-- Renderizar respostas precisas com base no tipo do item
-- Evitar lógica de decisão no ask.py
+- Renderizar respostas precisas para contatos
+- Trabalhar apenas com dados já resolvidos pelo Vault
 
 ⚠️ NÃO acessa YAML
-⚠️ NÃO decide conteúdo institucional
-⚠️ Trabalha apenas com dados já resolvidos pelo Vault
+⚠️ NÃO decide busca
 """
 
 from typing import Optional
@@ -21,10 +20,11 @@ from typing import Optional
 CONTACT_FIELD_INTENTS = {
     "telefone": "phone",
     "fone": "phone",
+    "ramal": "ramal",
     "email": "email",
     "e-mail": "email",
-    "horario": "working_hours",
-    "horário": "working_hours",
+    "horario": "hours",
+    "horário": "hours",
 }
 
 
@@ -33,13 +33,6 @@ CONTACT_FIELD_INTENTS = {
 # =========================================================
 
 def detect_contact_field(question: str) -> Optional[str]:
-    """
-    Detecta se a pergunta solicita um campo específico de contato.
-
-    Retorna:
-    - nome do campo (ex: 'phone', 'email')
-    - None se não houver intenção específica
-    """
     if not question:
         return None
 
@@ -57,52 +50,50 @@ def detect_contact_field(question: str) -> Optional[str]:
 # =========================================================
 
 def render_contact(raw: dict, question: str) -> str:
-    """
-    Renderiza resposta de contato com base na intenção detectada.
-    """
-    sector = raw.get("sector", "Setor de TI")
+    name = raw.get("name", "Setor institucional")
+    channels = raw.get("channels", {})
+    hours = raw.get("hours")
 
     field = detect_contact_field(question)
 
-    # -------------------------------
+    # -----------------------------------------------------
     # 🔹 INTENÇÃO ESPECÍFICA
-    # -------------------------------
+    # -----------------------------------------------------
     if field:
-        value = raw.get(field)
+        if field == "hours" and hours:
+            return f"⏰ Horário de atendimento da **{name}**: {hours}"
+
+        value = channels.get(field)
 
         if value:
             labels = {
                 "phone": "📞 Telefone",
+                "ramal": "☎️ Ramal",
                 "email": "📧 E-mail",
-                "working_hours": "⏰ Horário de atendimento",
             }
+            label = labels.get(field, "Contato")
+            return f"{label} da **{name}**: {value}"
 
-            label = labels.get(field, "Informação")
-            return f"{label} da {sector}: {value}"
+        return (
+            f"Não encontrei informação de **{field}** para **{name}**.\n"
+            f"Você pode pedir o *contato completo*."
+        )
 
-        return f"Não há informação de {field} cadastrada para o setor {sector}."
-
-    # -------------------------------
+    # -----------------------------------------------------
     # 🔹 RESPOSTA COMPLETA (SEM INTENÇÃO)
-    # -------------------------------
-    lines = [f"📌 **{sector}**"]
+    # -----------------------------------------------------
+    lines = [f"📌 **{name}**"]
 
-    if raw.get("phone"):
-        lines.append(f"📞 Telefone: {raw['phone']}")
+    if channels.get("phone"):
+        lines.append(f"📞 Telefone: {channels['phone']}")
 
-    if raw.get("email"):
-        lines.append(f"📧 E-mail: {raw['email']}")
+    if channels.get("ramal"):
+        lines.append(f"☎️ Ramal: {channels['ramal']}")
 
-    channels = raw.get("channels", {})
-    if channels:
-        lines.append("💬 Canais de atendimento:")
-        for name, value in channels.items():
-            lines.append(f"- {name.capitalize()}: {value}")
+    if channels.get("email"):
+        lines.append(f"📧 E-mail: {channels['email']}")
 
-    if raw.get("working_hours"):
-        lines.append(f"⏰ Horário de atendimento: {raw['working_hours']}")
-
-    if raw.get("notes"):
-        lines.append(f"\nℹ️ {raw['notes']}")
+    if hours:
+        lines.append(f"⏰ Horário: {hours}")
 
     return "\n".join(lines)

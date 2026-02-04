@@ -1,0 +1,15 @@
+type: flow
+id: sentinela-acesso
+title: Solicitação de Acesso ao Sistema SENTINELA
+keywords:
+- acesso sentinela
+- solicitar acesso
+- permissão
+description: null
+steps:
+- 1. Verifique se o solicitante possui e-mail institucional.
+- 2. Redija um e-mail solicitando acesso ao sistema SENTINELA.
+- 3. Informe nome completo, matrícula, setor e função do usuário.
+- 4. Encaminhe a solicitação para o e-mail informatica@tjma.jus.br.
+- 5. Aguarde retorno da equipe de Informática.
+- ''

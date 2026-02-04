@@ -1,0 +1,14 @@
+type: flow
+id: sentinela-cadastro
+title: Cadastro de Usuário – SENTINELA
+keywords:
+- cadastro sentinela
+- criar usuário
+description: null
+steps:
+- 1. Confirme que o usuário possui e-mail institucional ativo.
+- 2. Reúna os dados funcionais do usuário.
+- 3. Envie solicitação de cadastro para informatica@tjma.jus.br.
+- 4. Informe se o usuário exerce função de chefia ou gestão.
+- 5. Aguarde confirmação do cadastro.
+- ''

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>ZEUS — Admin</title>
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+
+<header>
+  <h1>ZEUS — Admin</h1>
+  <p>Gerenciamento da base de conhecimento</p>
+</header>
+
+<section class="auth">
+  <h2>Autenticação</h2>
+
+  <label>Usuário</label>
+  <input id="user" value="admin" />
+
+  <label>Senha</label>
+  <input id="pass" type="password" value="admin123" />
+</section>
+
+<section class="card">
+  <h2>📦 System</h2>
+
+  <label>ID</label>
+  <input id="sys-id" />
+
+  <label>Nome</label>
+  <input id="sys-name" />
+
+  <label>Keywords (vírgula)</label>
+  <input id="sys-keywords" />
+
+  <label>Descrição</label>
+  <textarea id="sys-description"></textarea>
+
+  <button onclick="saveSystem()">Salvar System</button>
+</section>
+
+<section class="card">
+  <h2>🔁 Flow</h2>
+
+  <label>ID</label>
+  <input id="flow-id" />
+
+  <label>Título</label>
+  <input id="flow-title" />
+
+  <label>Keywords (vírgula)</label>
+  <input id="flow-keywords" />
+
+  <label>Steps (1 linha por passo)</label>
+  <textarea id="flow-steps"></textarea>
+
+  <button onclick="saveFlow()">Salvar Flow</button>
+</section>
+
+<section class="card">
+  <h2>📞 Contact</h2>
+
+  <label>ID</label>
+  <input id="ct-id" />
+
+  <label>Nome</label>
+  <input id="ct-name" />
+
+  <label>Keywords (vírgula)</label>
+  <input id="ct-keywords" />
+
+  <label>Email</label>
+  <input id="ct-email" />
+
+  <label>Telefone</label>
+  <input id="ct-phone" />
+
+  <label>Ramal</label>
+  <input id="ct-ramal" />
+
+  <button onclick="saveContact()">Salvar Contact</button>
+</section>
+
+<section class="result">
+  <h2>Resultado</h2>
+  <pre id="result"></pre>
+</section>
+
+<script src="admin.js"></script>
+</body>
+</html>

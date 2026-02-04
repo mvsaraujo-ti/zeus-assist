@@ -6,7 +6,7 @@ Controller fino com:
 - Vault determinístico
 - Renderização desacoplada
 - Camada conversacional
-- ✅ Memória curta de contexto
+- Memória curta de contexto
 """
 
 from fastapi import APIRouter
@@ -14,8 +14,11 @@ from fastapi import APIRouter
 from app.schemas.ask import AskRequest, AskResponse
 from app.core.guardrails import validate_question
 from app.services.vault_service import search
+
 from app.services.intent_renderer import render_contact
 from app.services.system_renderer import render_system
+from app.services.flow_renderer import render_flow
+
 from app.services.conversational_service import apply_conversational_layer
 from app.services.context_service import save_context, get_context
 
@@ -42,20 +45,17 @@ def ask_zeus(payload: AskRequest):
     result = search(payload.question)
 
     # =====================================================
-    # 3️⃣ SE ACHOU → RESPONDE E SALVA CONTEXTO
+    # 3️⃣ SE ACHOU NO VAULT
     # =====================================================
     if result:
         raw = result.get("raw", {})
         item_type = result.get("type")
 
-        # Salva contexto para próximas perguntas
+        # Salva contexto para perguntas subsequentes
         save_context(item_type, raw)
 
         if item_type == "flow":
-            answer = raw.get("description", "")
-            if raw.get("steps"):
-                steps = "\n".join(f"- {step}" for step in raw["steps"])
-                answer = f"{answer}\n\nPassos:\n{steps}"
+            answer = render_flow(raw, payload.question)
 
         elif item_type == "system":
             answer = render_system(raw, payload.question)
@@ -74,19 +74,22 @@ def ask_zeus(payload: AskRequest):
         )
 
     # =====================================================
-    # 4️⃣ SE NÃO ACHOU → TENTA MEMÓRIA CURTA
+    # 4️⃣ NÃO ACHOU → USA MEMÓRIA CURTA
     # =====================================================
     context = get_context()
 
     if context:
-        raw = context["last_raw"]
-        item_type = context["last_type"]
+        raw = context.get("last_raw")
+        item_type = context.get("last_type")
 
-        if item_type == "contact":
-            answer = render_contact(raw, payload.question)
+        if item_type == "flow":
+            answer = render_flow(raw, payload.question)
 
         elif item_type == "system":
             answer = render_system(raw, payload.question)
+
+        elif item_type == "contact":
+            answer = render_contact(raw, payload.question)
 
         else:
             answer = None

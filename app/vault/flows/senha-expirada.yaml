@@ -1,0 +1,10 @@
+type: flow
+id: senha-expirada
+title: Senha expirada
+keywords:
+- senha
+- expirada
+description: null
+steps:
+- login
+- esqueci senha

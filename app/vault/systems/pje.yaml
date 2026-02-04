@@ -1,0 +1,11 @@
+type: system
+id: pje
+name: Processo Judicial Eletrônico (PJe)
+keywords:
+  - pje
+  - processo judicial
+  - processo eletrônico
+description: >
+  O Processo Judicial Eletrônico (PJe) é o sistema utilizado
+  para tramitação eletrônica de processos judiciais,
+  substituindo os autos físicos em papel.

@@ -1,0 +1,12 @@
+type: contact
+id: telefonista-geral-tjma
+name: Telefonista Geral – TJMA
+keywords:
+- telefonista tjma
+- recepcao tjma
+- telefone tjma
+channels:
+  email: ''
+  phone: 'Atendimento: (98) 2055-2340 Recepção: (98) 2055-4304'
+  ramal: 2340, 4304
+hours: null

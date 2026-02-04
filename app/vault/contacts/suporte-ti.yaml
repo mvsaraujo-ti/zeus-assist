@@ -1,0 +1,10 @@
+type: contact
+id: suporte-ti
+name: Suporte TI
+keywords:
+- suporte
+channels:
+  email: null
+  phone: null
+  ramal: '1234'
+hours: null
