@@ -4,7 +4,34 @@
   <meta charset="UTF-8" />
   <title>ZEUS – Assistente N1</title>
 
+  <!-- Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
   <style>
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --header: #1f2a44;
+      --text: #000000;
+      --subtext: #555;
+      --user-msg: #1f2a44;
+      --zeus-msg: #e9ecf1;
+      --input-bg: #ffffff;
+      --border: #ddd;
+    }
+
+    body.dark {
+      --bg: #0f1117;
+      --panel: #161b22;
+      --header: #0d1117;
+      --text: #e6edf3;
+      --subtext: #9da7b3;
+      --user-msg: #238636;
+      --zeus-msg: #21262d;
+      --input-bg: #0d1117;
+      --border: #30363d;
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -12,10 +39,12 @@
     body {
       margin: 0;
       font-family: "Segoe UI", Roboto, Arial, sans-serif;
-      background: #f5f6f8;
+      background: var(--bg);
       height: 100vh;
       display: flex;
       justify-content: center;
+      color: var(--text);
+      transition: background 0.2s;
     }
 
     .chat-container {
@@ -23,15 +52,18 @@
       max-width: 900px;
       display: flex;
       flex-direction: column;
-      background: #ffffff;
-      border-left: 1px solid #ddd;
-      border-right: 1px solid #ddd;
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
     }
 
     header {
-      background: #1f2a44;
+      background: var(--header);
       color: #fff;
       padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     header h2 {
@@ -45,11 +77,17 @@
       opacity: 0.85;
     }
 
+    .toggle {
+      cursor: pointer;
+      font-size: 18px;
+      user-select: none;
+    }
+
     #chat {
       flex: 1;
       padding: 20px;
       overflow-y: auto;
-      background: #f9fafb;
+      background: var(--bg);
     }
 
     .message {
@@ -58,30 +96,45 @@
       margin-bottom: 12px;
       border-radius: 10px;
       font-size: 14px;
-      line-height: 1.4;
-      white-space: pre-wrap;
+      line-height: 1.5;
     }
 
     .message.user {
-      background: #1f2a44;
+      background: var(--user-msg);
       color: #fff;
       margin-left: auto;
       border-bottom-right-radius: 2px;
     }
 
     .message.zeus {
-      background: #e9ecf1;
-      color: #000;
+      background: var(--zeus-msg);
+      color: var(--text);
       margin-right: auto;
       border-bottom-left-radius: 2px;
+    }
+
+    .message pre {
+      background: #1e1e1e;
+      color: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+
+    .message code {
+      background: rgba(0,0,0,0.2);
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 13px;
     }
 
     footer {
       display: flex;
       gap: 10px;
       padding: 15px;
-      border-top: 1px solid #ddd;
-      background: #fff;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
     }
 
     textarea {
@@ -90,7 +143,9 @@
       height: 50px;
       padding: 10px;
       border-radius: 6px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
       font-size: 14px;
     }
 
@@ -98,14 +153,19 @@
       padding: 0 18px;
       border-radius: 6px;
       border: none;
-      background: #1f2a44;
+      background: #1f6feb;
       color: #fff;
       cursor: pointer;
     }
 
     button:hover {
-      background: #2e3b5f;
+      opacity: 0.9;
     }
+    .message.typing {
+  font-style: italic;
+  opacity: 0.7;
+}
+
   </style>
 </head>
 
@@ -113,8 +173,11 @@
 
 <div class="chat-container">
   <header>
-    <h2>ZEUS – Assistente de TI</h2>
-    <p>Atendimento institucional N1</p>
+    <div>
+      <h2>ZEUS – Assistente de TI</h2>
+      <p>Atendimento institucional N1</p>
+    </div>
+    <div class="toggle" onclick="toggleTheme()">🌙</div>
   </header>
 
   <main id="chat">

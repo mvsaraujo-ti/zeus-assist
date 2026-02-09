@@ -1,14 +1,36 @@
+/* ---------- THEME ---------- */
+function toggleTheme() {
+  document.body.classList.toggle("dark");
+  localStorage.setItem(
+    "theme",
+    document.body.classList.contains("dark") ? "dark" : "light"
+  );
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+  }
+
+  const textarea = document.getElementById("question");
+  textarea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      ask();
+    }
+  });
+});
+
+/* ---------- CHAT ---------- */
 async function ask() {
   const textarea = document.getElementById("question");
-  const chat = document.getElementById("chat");
-
   const question = textarea.value.trim();
   if (!question) return;
 
-  addMessage(question, "user");
+  addUserMessage(question);
   textarea.value = "";
 
-  const loading = addMessage("Consultando o ZEUS…", "zeus");
+  const typingEl = addZeusTyping();
 
   try {
     const response = await fetch("http://127.0.0.1:8000/api/v1/ask", {
@@ -18,33 +40,61 @@ async function ask() {
     });
 
     const data = await response.json();
-    loading.textContent = data.answer || "Nenhuma resposta encontrada.";
-  } catch (err) {
-    loading.textContent = "Erro ao conectar com o backend.";
+
+    typingEl.remove();
+    addZeusMessageMarkdown(
+      data.answer || "Nenhuma resposta encontrada."
+    );
+  } catch {
+    typingEl.remove();
+    addZeusMessage("Erro ao conectar com o backend.");
   }
 }
 
-function addMessage(text, type) {
+/* ---------- UI HELPERS ---------- */
+
+function addUserMessage(text) {
   const chat = document.getElementById("chat");
   const div = document.createElement("div");
-
-  div.className = `message ${type}`;
+  div.className = "message user";
   div.textContent = text;
-
   chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+  scrollBottom();
+}
 
+function addZeusMessage(text) {
+  const chat = document.getElementById("chat");
+  const div = document.createElement("div");
+  div.className = "message zeus";
+  div.textContent = text;
+  chat.appendChild(div);
+  scrollBottom();
+}
+
+function addZeusMessageMarkdown(markdown) {
+  const chat = document.getElementById("chat");
+  const div = document.createElement("div");
+  div.className = "message zeus";
+  div.innerHTML = marked.parse(markdown);
+  chat.appendChild(div);
+  scrollBottom();
+}
+
+/* ---------- TYPING INDICATOR ---------- */
+
+function addZeusTyping() {
+  const chat = document.getElementById("chat");
+  const div = document.createElement("div");
+  div.className = "message zeus typing";
+  div.textContent = "ZEUS está digitando…";
+  chat.appendChild(div);
+  scrollBottom();
   return div;
 }
 
-/* Enter envia | Shift+Enter quebra linha */
-document.addEventListener("DOMContentLoaded", () => {
-  const textarea = document.getElementById("question");
+/* ---------- UTILS ---------- */
 
-  textarea.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      ask();
-    }
-  });
-});
+function scrollBottom() {
+  const chat = document.getElementById("chat");
+  chat.scrollTop = chat.scrollHeight;
+}
