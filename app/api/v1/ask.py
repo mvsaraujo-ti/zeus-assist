@@ -34,11 +34,11 @@ def ask_zeus(payload: AskRequest):
         )
 
     # =====================================================
-    # 1️⃣ SOCIAL / META
+    # 1️⃣ SOCIAL / META  (SHORT-CIRCUIT ABSOLUTO)
     # =====================================================
     social_intent = detect_social_intent(question)
 
-    # Saudação pura (oi, bom dia, etc.)
+    # Saudação curta (oi, bom dia, etc.)
     if social_intent == "greeting" and len(question.split()) <= 3:
         return AskResponse(
             answer=(
@@ -49,7 +49,9 @@ def ask_zeus(payload: AskRequest):
             source="social",
         )
 
-    # Identidade do ZEUS
+    # META — identidade do ZEUS
+    # ⚠️ NÃO consulta Vault
+    # ⚠️ NÃO passa por guardrails
     if social_intent == "meta":
         return AskResponse(
             answer=zeus_identity(),
