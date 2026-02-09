@@ -4,20 +4,21 @@ Guardrails — ZEUS
 Responsável por:
 - Bloquear perguntas fora do escopo institucional
 - Permitir consultas objetivas (lookup), mesmo curtas
+- Tratar mensagens sociais (saudações, identidade)
 - Evitar uso indevido do assistente
 
-⚠️ NÃO decide respostas
-⚠️ NÃO interpreta intenção complexa
-⚠️ Atua APENAS como filtro inicial
+⚠️ NÃO decide respostas de domínio
+⚠️ NÃO faz inferência complexa
+⚠️ Atua APENAS como filtro e classificador inicial
 """
 
 import re
+from typing import Optional
 
 
 # =========================================================
 # 🔹 PALAVRAS FORA DO ESCOPO INSTITUCIONAL
 # =========================================================
-# ZEUS NÃO responde questões jurídicas nem temas sensíveis
 
 FORBIDDEN_KEYWORDS = {
     "lei",
@@ -33,9 +34,8 @@ FORBIDDEN_KEYWORDS = {
 
 
 # =========================================================
-# 🔹 PALAVRAS QUE INDICAM CONSULTA DIRETA (LOOKUP)
+# 🔹 PALAVRAS DE LOOKUP DIRETO
 # =========================================================
-# Mesmo perguntas curtas devem ser permitidas se forem lookup
 
 LOOKUP_KEYWORDS = {
     "telefone",
@@ -48,35 +48,60 @@ LOOKUP_KEYWORDS = {
     "whatsapp",
     "telegram",
     "suporte",
+    "ramal",
 }
 
 
 # =========================================================
-# 🔹 FUNÇÃO PRINCIPAL
+# 🔹 SAUDAÇÕES / SOCIAL (HUMANIZAÇÃO CONTROLADA)
+# =========================================================
+
+GREETING_KEYWORDS = {
+    "oi",
+    "olá",
+    "ola",
+    "bom dia",
+    "boa tarde",
+    "boa noite",
+    "e aí",
+    "eai",
+    "fala",
+}
+
+
+# =========================================================
+# 🔹 META / IDENTIDADE DO ASSISTENTE
+# =========================================================
+
+META_PATTERNS = {
+    "quem é você",
+    "quem voce é",
+    "o que você é",
+    "o que voce é",
+    "qual seu nome",
+    "quem é o zeus",
+    "o que é o zeus",
+    "pra que você serve",
+    "pra que voce serve",
+}
+
+
+# =========================================================
+# 🔹 FUNÇÕES PÚBLICAS
 # =========================================================
 
 def validate_question(question: str) -> None:
     """
     Valida se a pergunta está dentro do escopo do ZEUS.
-
-    Regras aplicadas:
-    1. Pergunta deve existir e ser string
-    2. Bloqueia termos jurídicos
-    3. Permite lookup direto (mesmo sem verbo)
-    4. Bloqueia frases muito curtas sem contexto
+    Lança ValueError apenas quando deve BLOQUEAR.
     """
 
-    # -----------------------------------------------------
-    # 1️⃣ VALIDAÇÃO BÁSICA
-    # -----------------------------------------------------
     if not question or not isinstance(question, str):
         raise ValueError("Pergunta inválida.")
 
     text = question.lower().strip()
 
-    # -----------------------------------------------------
-    # 2️⃣ BLOQUEIO DE TEMAS FORA DO ESCOPO
-    # -----------------------------------------------------
+    # Bloqueio de temas fora do escopo
     for keyword in FORBIDDEN_KEYWORDS:
         if keyword in text:
             raise ValueError(
@@ -84,34 +109,43 @@ def validate_question(question: str) -> None:
                 "Por favor, abra um chamado para o setor responsável."
             )
 
-    # -----------------------------------------------------
-    # 3️⃣ NORMALIZAÇÃO PARA ANÁLISE SIMPLES
-    # -----------------------------------------------------
+    # Normalização simples
     words = re.sub(r"[^\w\s]", "", text).split()
 
-    # -----------------------------------------------------
-    # 4️⃣ PERMITIR LOOKUP DIRETO
-    # -----------------------------------------------------
-    # Exemplo:
-    # - "telefone da informática"
-    # - "email dtic"
-    # - "horário do suporte"
+    # Permitir lookup direto (mesmo curto)
     if any(word in LOOKUP_KEYWORDS for word in words):
         return
 
-    # -----------------------------------------------------
-    # 5️⃣ BLOQUEAR FRASES MUITO CURTAS E GENÉRICAS
-    # -----------------------------------------------------
-    # Exemplo:
-    # - "oi"
-    # - "ajuda"
-    # - "suporte"
-    if len(words) < 3:
+    # Bloquear frases curtas genéricas (que não sejam sociais)
+    if len(words) < 3 and not is_greeting(text):
         raise ValueError(
             "Por favor, informe um pouco mais de contexto para que eu possa ajudar."
         )
 
-    # -----------------------------------------------------
-    # 6️⃣ PERMITIR PERGUNTA
-    # -----------------------------------------------------
-    return
+
+def detect_social_intent(question: str) -> Optional[str]:
+    """
+    Detecta intenção social/meta.
+    Retorna:
+      - 'greeting'
+      - 'meta'
+      - None
+    """
+
+    q = question.lower().strip()
+
+    if any(p in q for p in META_PATTERNS):
+        return "meta"
+
+    if is_greeting(q):
+        return "greeting"
+
+    return None
+
+
+# =========================================================
+# 🔹 FUNÇÕES AUXILIARES
+# =========================================================
+
+def is_greeting(text: str) -> bool:
+    return any(greet == text or greet in text for greet in GREETING_KEYWORDS)

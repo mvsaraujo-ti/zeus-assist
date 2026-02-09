@@ -10,7 +10,7 @@ class AskRequest(BaseModel):
     """
     question: str = Field(
         ...,
-        min_length=5,
+        min_length=1,
         description="Pergunta do usuário para o ZEUS"
     )
 
@@ -20,4 +20,4 @@ class AskResponse(BaseModel):
     DTO de saída da rota /ask.
     """
     answer: str
-    source: str  # vault | rule | fallback
+    source: str  # vault | rule | fallback | social | meta

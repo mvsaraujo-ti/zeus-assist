@@ -1,15 +1,10 @@
-type: contact
 id: informatica-tjma
 name: Informática TJMA
 keywords:
-  - informatica
-  - tecnologia
-  - ti
-  - suporte
-  - email
-  - telefone
+- informatica"
+- '"ti"'
+- '"suporte'
 channels:
   email: informatica@tjma.jus.br
-  phone: "(98) 2055-2600 / 2601 / 2602 / 2603"
-  ramal: "2600 / 2601 / 2602 / 2603"
-hours: "Segunda a sexta, 8h às 18h"
+  phone: (98) 2055-2055
+  ramal: '2055'

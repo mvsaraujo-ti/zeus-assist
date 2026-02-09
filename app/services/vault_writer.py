@@ -1,52 +1,74 @@
+# app/services/vault_writer.py
+
+import os
 import yaml
-from pathlib import Path
-from typing import Literal
-
-from app.schemas.vault.system import SystemSchema
-from app.schemas.vault.flow import FlowSchema
-from app.schemas.vault.contact import ContactSchema
-
-VAULT_PATH = Path(__file__).resolve().parent.parent / "vault"
+from datetime import datetime
 
 
-def write_vault_item(
-    item_type: Literal["system", "flow", "contact"],
-    payload: dict,
-) -> str:
+BASE_VAULT_PATH = "app/vault"
+HISTORY_DIR = ".history"
+
+
+def write_vault_item(item_type: str, data: dict) -> str:
     """
-    Valida payload com Pydantic e salva YAML no vault.
-
-    Retorna o caminho do arquivo criado.
+    Salva um item no Vault com versionamento automático.
+    Se o arquivo já existir, move a versão anterior para .history.
+    Retorna o caminho do arquivo salvo.
     """
 
-    if item_type == "system":
-        obj = SystemSchema(**payload)
-        subdir = "systems"
+    item_id = data.get("id")
+    if not item_id:
+        raise ValueError("Campo 'id' é obrigatório para versionamento.")
 
-    elif item_type == "flow":
-        obj = FlowSchema(**payload)
-        subdir = "flows"
+    folder = _resolve_folder(item_type)
+    os.makedirs(folder, exist_ok=True)
 
-    elif item_type == "contact":
-        obj = ContactSchema(**payload)
-        subdir = "contacts"
+    filename = f"{item_id}.yaml"
+    file_path = os.path.join(folder, filename)
 
-    else:
-        raise ValueError("Tipo inválido")
+    # Se já existe, versiona
+    if os.path.exists(file_path):
+        _archive_previous_version(item_type, item_id, file_path)
 
-    # Garante diretório
-    dir_path = VAULT_PATH / subdir
-    dir_path.mkdir(parents=True, exist_ok=True)
-
-    file_path = dir_path / f"{obj.id}.yaml"
-
-    # Salva YAML
+    # Salva versão atual
     with open(file_path, "w", encoding="utf-8") as f:
         yaml.safe_dump(
-            obj.model_dump(),
+            data,
             f,
-            sort_keys=False,
             allow_unicode=True,
+            sort_keys=False,
         )
 
-    return str(file_path)
+    return file_path
+
+
+# -------------------------
+# FUNÇÕES AUXILIARES
+# -------------------------
+
+def _resolve_folder(item_type: str) -> str:
+    if item_type == "contact":
+        return os.path.join(BASE_VAULT_PATH, "contacts")
+    if item_type == "system":
+        return os.path.join(BASE_VAULT_PATH, "systems")
+    if item_type == "flow":
+        return os.path.join(BASE_VAULT_PATH, "flows")
+
+    raise ValueError(f"Tipo inválido: {item_type}")
+
+
+def _archive_previous_version(item_type: str, item_id: str, file_path: str):
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+
+    history_base = os.path.join(
+        BASE_VAULT_PATH,
+        HISTORY_DIR,
+        f"{item_type}s",
+        item_id,
+    )
+
+    os.makedirs(history_base, exist_ok=True)
+
+    history_file = os.path.join(history_base, f"{timestamp}.yaml")
+
+    os.rename(file_path, history_file)

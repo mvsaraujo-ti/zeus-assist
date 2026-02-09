@@ -1,80 +1,130 @@
-"""
-Ask API — ZEUS
-
-Controller fino com:
-- Guardrails
-- Vault determinístico
-- Renderização desacoplada
-- Camada conversacional
-- Memória curta de contexto
-"""
-
 from fastapi import APIRouter
 
 from app.schemas.ask import AskRequest, AskResponse
-from app.core.guardrails import validate_question
-from app.services.vault_service import search
+from app.core.guardrails import validate_question, detect_social_intent
 
+from app.services.vault_service import search
 from app.services.intent_renderer import render_contact
 from app.services.system_renderer import render_system
 from app.services.flow_renderer import render_flow
 
-from app.services.conversational_service import apply_conversational_layer
 from app.services.context_service import save_context, get_context
+from app.services.tone_service import apply_tone
+from app.services.meta_responses import zeus_identity
+from app.services.suggestions_logger import log_suggestion
 
 router = APIRouter()
 
 
 @router.post("/ask", response_model=AskResponse)
 def ask_zeus(payload: AskRequest):
+    # =====================================================
+    # 0️⃣ NORMALIZAÇÃO BÁSICA
+    # =====================================================
+    question = payload.question.strip()
+
+    if not question:
+        return AskResponse(
+            answer=(
+                "Olá! 👋\n"
+                "Sou o **ZEUS**, assistente institucional de TI do TJMA.\n\n"
+                "Como posso te ajudar hoje?"
+            ),
+            source="social",
+        )
 
     # =====================================================
-    # 1️⃣ GUARDRAILS
+    # 1️⃣ SOCIAL / META
+    # =====================================================
+    social_intent = detect_social_intent(question)
+
+    # Saudação pura (oi, bom dia, etc.)
+    if social_intent == "greeting" and len(question.split()) <= 3:
+        return AskResponse(
+            answer=(
+                "Olá! 👋\n"
+                "Sou o **ZEUS**, assistente institucional de TI do TJMA.\n\n"
+                "Como posso te ajudar hoje?"
+            ),
+            source="social",
+        )
+
+    # Identidade do ZEUS
+    if social_intent == "meta":
+        return AskResponse(
+            answer=zeus_identity(),
+            source="meta",
+        )
+
+    # =====================================================
+    # 2️⃣ GUARDRAILS
     # =====================================================
     try:
-        validate_question(payload.question)
+        validate_question(question)
     except ValueError as e:
         return AskResponse(
             answer=str(e),
-            source="rule"
+            source="rule",
         )
 
     # =====================================================
-    # 2️⃣ BUSCA NO VAULT
+    # 3️⃣ BUSCA NO VAULT
     # =====================================================
-    result = search(payload.question)
+    result = search(question)
 
-    # =====================================================
-    # 3️⃣ SE ACHOU NO VAULT
-    # =====================================================
-    if result:
-        raw = result.get("raw", {})
-        item_type = result.get("type")
+    # -----------------------------------------------------
+    # 3.1 ITEM ENCONTRADO (raw presente)
+    # -----------------------------------------------------
+    if result and "raw" in result:
+        raw = result["raw"]
+        item_type = result["type"]
 
-        # Salva contexto para perguntas subsequentes
+        # salva contexto para follow-up
         save_context(item_type, raw)
 
         if item_type == "flow":
-            answer = render_flow(raw, payload.question)
-
+            answer = render_flow(raw, question)
         elif item_type == "system":
-            answer = render_system(raw, payload.question)
-
+            answer = render_system(raw, question)
         elif item_type == "contact":
-            answer = render_contact(raw, payload.question)
-
+            answer = render_contact(raw, question)
         else:
             answer = "Informação institucional encontrada na base do ZEUS."
 
-        final_answer = apply_conversational_layer(answer)
+        final_answer = apply_tone(
+            text=answer,
+            source="vault",
+            has_greeting=(social_intent == "greeting"),
+            is_followup=False,
+        )
 
         return AskResponse(
             answer=final_answer,
-            source="vault"
+            source="vault",
+        )
+
+    # -----------------------------------------------------
+    # 3.2 SUGESTÃO EDUCADA (COM LOG)
+    # -----------------------------------------------------
+    if result and result.get("type") == "suggestion":
+        sugestoes = result.get("suggestions", [])[:5]
+
+        # registra para análise futura
+        log_suggestion(question, sugestoes)
+
+        sugestoes_txt = ", ".join(sugestoes)
+
+        return AskResponse(
+            answer=(
+                "Não encontrei exatamente o que você procurava.\n\n"
+                f"Talvez você esteja buscando por algo relacionado a: **{sugestoes_txt}**.\n\n"
+                "Se quiser, reformule a pergunta ou seja um pouco mais específico."
+            ),
+            source="fallback",
         )
 
     # =====================================================
-    # 4️⃣ NÃO ACHOU → USA MEMÓRIA CURTA
+    # 4️⃣ MEMÓRIA CURTA (FOLLOW-UP)
     # =====================================================
     context = get_context()
 
@@ -83,32 +133,38 @@ def ask_zeus(payload: AskRequest):
         item_type = context.get("last_type")
 
         if item_type == "flow":
-            answer = render_flow(raw, payload.question)
-
+            answer = render_flow(raw, question)
         elif item_type == "system":
-            answer = render_system(raw, payload.question)
-
+            answer = render_system(raw, question)
         elif item_type == "contact":
-            answer = render_contact(raw, payload.question)
-
+            answer = render_contact(raw, question)
         else:
             answer = None
 
         if answer:
-            final_answer = apply_conversational_layer(answer)
+            final_answer = apply_tone(
+                text=answer,
+                source="context",
+                is_followup=True,
+            )
 
             return AskResponse(
                 answer=final_answer,
-                source="context"
+                source="context",
             )
 
     # =====================================================
     # 5️⃣ FALLBACK FINAL
     # =====================================================
+    fallback_text = (
+        "Não encontrei essa informação na base do ZEUS.\n"
+        "Se desejar, posso te orientar sobre como abrir um chamado para o suporte."
+    )
+
     return AskResponse(
-        answer=(
-            "Não encontrei essa informação na base do ZEUS. "
-            "Por favor, abra um chamado para o suporte."
+        answer=apply_tone(
+            text=fallback_text,
+            source="fallback",
         ),
-        source="fallback"
+        source="fallback",
     )
