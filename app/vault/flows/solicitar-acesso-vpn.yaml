@@ -1,0 +1,26 @@
+id: solicitar-acesso-vpn
+title: Solicitar acesso à VPN
+keywords:
+  - solicitar vpn
+  - acesso vpn
+  - liberar vpn
+  - autorização vpn
+  - trabalho remoto
+
+steps:
+  - O acesso à VPN somente pode ser solicitado pelo chefe imediato do servidor.
+  - A solicitação deve ser feita utilizando o e-mail institucional do chefe imediato.
+  - É obrigatório anexar a portaria de teletrabalho ou documento que autorize o trabalho remoto.
+  - Após o recebimento do e-mail institucional, a equipe técnica realiza o cadastro da solicitação no sistema GLPI.
+  - Alternativamente, o chefe de setor pode cadastrar diretamente a solicitação no GLPI, desde que anexe a documentação obrigatória.
+  - No GLPI, acesse - Requisição → VPN → Solicitar acesso ao VPN.
+  - A solicitação será analisada pelo setor responsável pela autorização do acesso.
+
+notes: >
+  Solicitações realizadas sem a documentação exigida ou fora do fluxo institucional
+  não serão atendidas.
+
+support:
+  - Núcleo de Help Desk TJMA
+  - Telefone: (98) 2055-2055
+  - Email: informatica@tjma.jus.br

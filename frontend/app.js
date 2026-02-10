@@ -30,7 +30,9 @@ async function ask() {
   addUserMessage(question);
   textarea.value = "";
 
-  const typingEl = addZeusTyping();
+  const typing = addZeusTyping();
+
+  let answer = "Nenhuma resposta encontrada.";
 
   try {
     const response = await fetch("http://127.0.0.1:8000/api/v1/ask", {
@@ -40,15 +42,20 @@ async function ask() {
     });
 
     const data = await response.json();
-
-    typingEl.remove();
-    addZeusMessageMarkdown(
-      data.answer || "Nenhuma resposta encontrada."
-    );
+    answer = data.answer || answer;
   } catch {
-    typingEl.remove();
+    typing.stop();
+    typing.el.remove();
     addZeusMessage("Erro ao conectar com o backend.");
+    return;
   }
+
+  /* Delay artificial de ~1s */
+  setTimeout(() => {
+    typing.stop();
+    typing.el.remove();
+    addZeusMessageMarkdown(answer);
+  }, 1000);
 }
 
 /* ---------- UI HELPERS ---------- */
@@ -80,16 +87,29 @@ function addZeusMessageMarkdown(markdown) {
   scrollBottom();
 }
 
-/* ---------- TYPING INDICATOR ---------- */
+/* ---------- TYPING INDICATOR (3 DOTS) ---------- */
 
 function addZeusTyping() {
   const chat = document.getElementById("chat");
   const div = document.createElement("div");
   div.className = "message zeus typing";
-  div.textContent = "ZEUS está digitando…";
+  div.textContent = "ZEUS está digitando";
+
   chat.appendChild(div);
   scrollBottom();
-  return div;
+
+  let dots = 0;
+  const interval = setInterval(() => {
+    dots = (dots + 1) % 4;
+    div.textContent = "ZEUS está digitando" + ".".repeat(dots);
+  }, 400);
+
+  return {
+    el: div,
+    stop() {
+      clearInterval(interval);
+    }
+  };
 }
 
 /* ---------- UTILS ---------- */

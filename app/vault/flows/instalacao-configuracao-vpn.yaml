@@ -1,0 +1,26 @@
+id: instalacao-configuracao-vpn
+title: Instalação e configuração da VPN (GlobalProtect)
+keywords:
+   - instalar vpn
+   - configurar vpn
+   - globalprotect
+   - instalação vpn
+   - configuração vpn
+   - quem instala vpn
+   - quem configura vpn
+   - quem configura globalprotect
+
+steps:
+  - Após a autorização do acesso à VPN, a instalação e configuração do ambiente é realizada pela equipe do Núcleo de Help Desk (NHD).
+  - O procedimento inclui a instalação do cliente GlobalProtect e a configuração necessária para o acesso remoto seguro.
+  - A execução do atendimento é registrada no sistema GLPI.
+  - O registro deve seguir o caminho - Requisição > VPN > Instalação e configuração da VPN (GlobalProtect).
+
+notes: >
+  A configuração da VPN não é realizada pelo usuário final.
+  Todo o procedimento técnico é executado pela equipe responsável.
+
+support:
+  - Núcleo de Help Desk TJMA
+  - Telefone: (98) 2055-2055
+  - Email: informatica@tjma.jus.br

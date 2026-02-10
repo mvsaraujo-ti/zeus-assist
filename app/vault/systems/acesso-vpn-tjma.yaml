@@ -1,0 +1,34 @@
+id: acesso-vpn-tjma
+title: Acesso VPN no TJMA
+keywords:
+  - vpn
+  - acesso remoto
+  - trabalho remoto
+  - globalprotect
+  - teletrabalho
+  - funcionamento vpn
+  - como funciona vpn
+description: >
+  O acesso remoto no TJMA é realizado por meio de VPN
+  (Virtual Private Network), permitindo que servidores
+  autorizados acessem a rede corporativa fora das dependências físicas.
+
+  A concessão do acesso depende de autorização formal e documentação
+  que comprove o trabalho remoto, conforme a Norma de Controle de Acessos
+  do TJMA.
+
+  O acesso é concedido com permissões mínimas necessárias, podendo exigir
+  o uso de Múltiplo Fator de Autenticação (MFA), quando disponível.
+
+notes: >
+  O processo de solicitação, autorização e configuração do acesso VPN
+  envolve mais de um setor e segue fluxo institucional definido.
+
+  O acesso à VPN somente pode ser solicitado pelo chefe imediato
+  do servidor, utilizando e-mail institucional ou diretamente
+  no GLPI, com documentação obrigatória.
+
+
+references:
+  - title: Resolução GP nº 39/2023 — Controle de Acesso e Gestão de Identidade
+    url: https://www.tjma.jus.br/atos/portal/geral/504502/132/lib
