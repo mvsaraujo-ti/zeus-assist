@@ -108,21 +108,48 @@ def normalize_items(items: list, item_type: str) -> list:
 
 
 # =========================================================
-# SCORER
+# MATCHES FORTES (ANTI FALSE-POSITIVE)
+# =========================================================
+
+def has_strong_match(question_words: List[str], item: dict) -> bool:
+    """
+    SYSTEM e FLOW só são válidos se houver match explícito
+    no title OU keywords.
+    """
+
+    # Match no title (identificador principal)
+    title_words = normalize_text(item.get("title", ""))
+    if any(word in question_words for word in title_words):
+        return True
+
+    # Match em keywords
+    for kw in item.get("keywords", []):
+        kw_words = normalize_text(kw)
+        if any(word in question_words for word in kw_words):
+            return True
+
+    return False
+
+
+# =========================================================
+# SCORER (RANKING SECUNDÁRIO)
 # =========================================================
 
 def score_item(question_words: List[str], item: dict) -> int:
     score = 0
 
+    # Title: peso alto
     for word in normalize_text(item.get("title", "")):
         if word in question_words:
             score += 3
 
+    # Keywords: peso médio
     for kw in item.get("keywords", []):
         for word in normalize_text(kw):
             if word in question_words:
                 score += 2
 
+    # Content: peso baixo (NUNCA decisivo para SYSTEM/FLOW)
     for word in normalize_text(item.get("content", "")):
         if word in question_words:
             score += 1
@@ -131,7 +158,7 @@ def score_item(question_words: List[str], item: dict) -> int:
 
 
 # =========================================================
-# BUSCA UNIFICADA (COM PRIORIDADE POR INTENÇÃO)
+# BUSCA UNIFICADA (COM GOVERNANÇA RÍGIDA)
 # =========================================================
 
 def search(question: str) -> Optional[dict]:
@@ -169,8 +196,7 @@ def search(question: str) -> Optional[dict]:
 
         for item in contacts:
             score = score_item(expanded_words, item)
-            for kw in item.get("keywords", []):
-                suggestions.add(kw)
+            suggestions.update(item.get("keywords", []))
 
             if score > best_score:
                 best_score = score
@@ -180,7 +206,6 @@ def search(question: str) -> Optional[dict]:
             best_contact["score"] = best_score
             return best_contact
 
-        # Não achou contato → sugestão educada
         return {
             "type": "suggestion",
             "intent": "contact",
@@ -188,18 +213,23 @@ def search(question: str) -> Optional[dict]:
         }
 
     # ----------------------------
-    # BUSCA NORMAL (SYSTEM + FLOW + CONTACT)
+    # BUSCA NORMAL (FLOW + SYSTEM + CONTACT)
     # ----------------------------
-    items = systems + flows + contacts
+    items = flows + systems + contacts
 
     best_item = None
     best_score = 0
     suggestions = set()
 
     for item in items:
+        # 🔒 TRAVA CRÍTICA:
+        # SYSTEM e FLOW exigem match forte
+        if item["type"] in {"system", "flow"}:
+            if not has_strong_match(expanded_words, item):
+                continue
+
         score = score_item(expanded_words, item)
-        for kw in item.get("keywords", []):
-            suggestions.add(kw)
+        suggestions.update(item.get("keywords", []))
 
         if score > best_score:
             best_score = score
@@ -209,6 +239,9 @@ def search(question: str) -> Optional[dict]:
         best_item["score"] = best_score
         return best_item
 
+    # ----------------------------
+    # FALLBACK COM SUGESTÃO
+    # ----------------------------
     return {
         "type": "suggestion",
         "intent": "generic",
