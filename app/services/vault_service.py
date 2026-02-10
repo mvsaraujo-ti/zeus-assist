@@ -20,6 +20,7 @@ from typing import Optional, List, Dict
 
 from app.core.synonyms import SYNONYMS_MAP
 
+
 # =========================================================
 # CONFIGURAÇÃO BASE
 # =========================================================
@@ -27,11 +28,33 @@ from app.core.synonyms import SYNONYMS_MAP
 VAULT_PATH = Path(__file__).resolve().parent.parent / "vault"
 _VAULT_CACHE: Dict[str, dict] = {}
 
+
+# =========================================================
+# STOPWORDS INSTITUCIONAIS (NÃO IDENTIFICAM ITENS)
+# =========================================================
+
+GENERIC_TITLE_WORDS = {
+    "sistema",
+    "portal",
+    "processo",
+    "solicitacao",
+    "acesso",
+    "cadastro",
+    "pedido",
+    "informacao",
+    "informacoes",
+    "suporte",
+    "ti",
+    "informatica",
+}
+
+
 # =========================================================
 # LOADERS
 # =========================================================
 
 def load_vault_file(filename: str) -> dict:
+    """Carrega um YAML do vault com cache em memória."""
     if filename in _VAULT_CACHE:
         return _VAULT_CACHE[filename]
 
@@ -47,6 +70,7 @@ def load_vault_file(filename: str) -> dict:
 
 
 def load_vault_dir(subdir: str) -> List[dict]:
+    """Carrega todos os YAMLs de um subdiretório do vault."""
     items = []
     dir_path = VAULT_PATH / subdir
 
@@ -62,10 +86,17 @@ def load_vault_dir(subdir: str) -> List[dict]:
 
 
 # =========================================================
-# NORMALIZAÇÃO
+# NORMALIZAÇÃO DE TEXTO
 # =========================================================
 
 def normalize_text(text: str) -> List[str]:
+    """
+    Normaliza texto:
+    - lower
+    - remove acentos
+    - remove pontuação
+    - separa em palavras
+    """
     if not text:
         return []
 
@@ -78,6 +109,7 @@ def normalize_text(text: str) -> List[str]:
 
 
 def expand_with_synonyms(words: List[str]) -> List[str]:
+    """Expande palavras com sinônimos controlados."""
     expanded = set(words)
 
     for word in words:
@@ -94,6 +126,7 @@ def expand_with_synonyms(words: List[str]) -> List[str]:
 # =========================================================
 
 def normalize_items(items: list, item_type: str) -> list:
+    """Padroniza estrutura interna dos itens do vault."""
     return [
         {
             "type": item_type,
@@ -108,21 +141,24 @@ def normalize_items(items: list, item_type: str) -> list:
 
 
 # =========================================================
-# MATCHES FORTES (ANTI FALSE-POSITIVE)
+# MATCH FORTE (ANTI FALSE-POSITIVE)
 # =========================================================
 
 def has_strong_match(question_words: List[str], item: dict) -> bool:
     """
     SYSTEM e FLOW só são válidos se houver match explícito
-    no title OU keywords.
+    em TITLE ou KEYWORDS, ignorando termos genéricos.
     """
 
-    # Match no title (identificador principal)
+    # --- TITLE (ignorando stopwords)
     title_words = normalize_text(item.get("title", ""))
-    if any(word in question_words for word in title_words):
-        return True
+    for word in title_words:
+        if word in GENERIC_TITLE_WORDS:
+            continue
+        if word in question_words:
+            return True
 
-    # Match em keywords
+    # --- KEYWORDS (devem ser identificadores reais)
     for kw in item.get("keywords", []):
         kw_words = normalize_text(kw)
         if any(word in question_words for word in kw_words):
@@ -132,24 +168,25 @@ def has_strong_match(question_words: List[str], item: dict) -> bool:
 
 
 # =========================================================
-# SCORER (RANKING SECUNDÁRIO)
+# SCORER (APENAS RANKING)
 # =========================================================
 
 def score_item(question_words: List[str], item: dict) -> int:
+    """
+    Score serve apenas para desempate/ranking.
+    Nunca decide sozinho.
+    """
     score = 0
 
-    # Title: peso alto
     for word in normalize_text(item.get("title", "")):
         if word in question_words:
             score += 3
 
-    # Keywords: peso médio
     for kw in item.get("keywords", []):
         for word in normalize_text(kw):
             if word in question_words:
                 score += 2
 
-    # Content: peso baixo (NUNCA decisivo para SYSTEM/FLOW)
     for word in normalize_text(item.get("content", "")):
         if word in question_words:
             score += 1
@@ -158,15 +195,16 @@ def score_item(question_words: List[str], item: dict) -> int:
 
 
 # =========================================================
-# BUSCA UNIFICADA (COM GOVERNANÇA RÍGIDA)
+# BUSCA UNIFICADA
 # =========================================================
 
 def search(question: str) -> Optional[dict]:
+    """Busca determinística no vault."""
     base_words = normalize_text(question)
     expanded_words = expand_with_synonyms(base_words)
 
     # ----------------------------
-    # Intenção explícita de contato
+    # INTENÇÃO EXPLÍCITA: CONTACT
     # ----------------------------
     contact_intent_words = {
         "telefone",
@@ -180,14 +218,14 @@ def search(question: str) -> Optional[dict]:
     is_contact_intent = any(word in expanded_words for word in contact_intent_words)
 
     # ----------------------------
-    # Carrega dados
+    # CARREGA ITENS
     # ----------------------------
     contacts = normalize_items(load_vault_dir("contacts"), "contact")
     systems = normalize_items(load_vault_dir("systems"), "system")
     flows = normalize_items(load_vault_dir("flows"), "flow")
 
     # ----------------------------
-    # PRIORIDADE ABSOLUTA: CONTACT
+    # PRIORIDADE: CONTACT
     # ----------------------------
     if is_contact_intent:
         best_contact = None
@@ -196,7 +234,12 @@ def search(question: str) -> Optional[dict]:
 
         for item in contacts:
             score = score_item(expanded_words, item)
-            suggestions.update(item.get("keywords", []))
+
+            # Sugestões filtradas (sem termos genéricos)
+            for kw in item.get("keywords", []):
+                kw_words = normalize_text(kw)
+                if any(word not in GENERIC_TITLE_WORDS for word in kw_words):
+                    suggestions.add(kw)
 
             if score > best_score:
                 best_score = score
@@ -213,7 +256,7 @@ def search(question: str) -> Optional[dict]:
         }
 
     # ----------------------------
-    # BUSCA NORMAL (FLOW + SYSTEM + CONTACT)
+    # BUSCA NORMAL
     # ----------------------------
     items = flows + systems + contacts
 
@@ -222,14 +265,18 @@ def search(question: str) -> Optional[dict]:
     suggestions = set()
 
     for item in items:
-        # 🔒 TRAVA CRÍTICA:
         # SYSTEM e FLOW exigem match forte
         if item["type"] in {"system", "flow"}:
             if not has_strong_match(expanded_words, item):
                 continue
 
         score = score_item(expanded_words, item)
-        suggestions.update(item.get("keywords", []))
+
+        # Sugestões filtradas
+        for kw in item.get("keywords", []):
+            kw_words = normalize_text(kw)
+            if any(word not in GENERIC_TITLE_WORDS for word in kw_words):
+                suggestions.add(kw)
 
         if score > best_score:
             best_score = score
@@ -240,7 +287,7 @@ def search(question: str) -> Optional[dict]:
         return best_item
 
     # ----------------------------
-    # FALLBACK COM SUGESTÃO
+    # FALLBACK
     # ----------------------------
     return {
         "type": "suggestion",
