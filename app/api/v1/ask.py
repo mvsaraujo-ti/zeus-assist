@@ -60,7 +60,6 @@ def ask_zeus(payload: AskRequest):
     # =====================================================
     social_intent = detect_social_intent(question)
 
-    # Saudação curta
     if social_intent == "greeting" and len(question_words) <= 3:
         return AskResponse(
             answer=(
@@ -71,7 +70,6 @@ def ask_zeus(payload: AskRequest):
             source="social",
         )
 
-    # Identidade institucional
     if social_intent == "meta":
         return AskResponse(
             answer=zeus_identity(),
@@ -84,31 +82,42 @@ def ask_zeus(payload: AskRequest):
     context = get_context()
 
     if context and is_followup_only(question_words):
-        last_raw = context.get("last_raw")
-        last_type = context.get("last_type")
+        ctx_type = context.get("type")
+        raw = context.get("raw")
 
         answer = None
 
-        # SYSTEM → pedido de passo a passo → tentar FLOW relacionado
-        if last_type == "system":
-            flow_result = search(last_raw.get("title", ""))
+        # SYSTEM → pedido de ação → tenta FLOW relacionado
+        if ctx_type == "system":
+            system_title = context.get("system_title") or raw.get("title", "")
 
+            flow_result = search(system_title)
             if flow_result and flow_result.get("type") == "flow":
-                save_context("flow", flow_result["raw"])
-                answer = render_flow(flow_result["raw"], question)
+                flow_raw = flow_result["raw"]
+
+                save_context(
+                    item_type="flow",
+                    raw=flow_raw,
+                    system_id=context.get("system_id"),
+                    system_title=context.get("system_title"),
+                    flow_id=flow_raw.get("id"),
+                    flow_title=flow_raw.get("title"),
+                )
+
+                answer = render_flow(flow_raw, question)
             else:
                 answer = (
                     "No momento, não encontrei um passo a passo específico "
                     "para esse sistema."
                 )
 
-        # FLOW → reaplica normalmente
-        elif last_type == "flow":
-            answer = render_flow(last_raw, question)
+        # FLOW → reaplica
+        elif ctx_type == "flow":
+            answer = render_flow(raw, question)
 
-        # CONTACT → reaplica contato
-        elif last_type == "contact":
-            answer = render_contact(last_raw, question)
+        # CONTACT → reaplica
+        elif ctx_type == "contact":
+            answer = render_contact(raw, question)
 
         if answer:
             final_answer = apply_tone(
@@ -139,14 +148,13 @@ def ask_zeus(payload: AskRequest):
     result = search(question)
 
     # -----------------------------------------------------
-    # 4.1 ITEM ENCONTRADO (COM PRIORIDADE DE FLOW)
+    # 4.1 ITEM ENCONTRADO
     # -----------------------------------------------------
     if result and "raw" in result:
         raw = result["raw"]
         item_type = result["type"]
 
-        # 🔁 Se veio SYSTEM mas a pergunta indica ação,
-        # tenta promover para FLOW antes de responder
+        # 🔁 SYSTEM com intenção de ação → promover para FLOW
         if item_type == "system":
             ACTION_WORDS = {
                 "cadastrar",
@@ -161,13 +169,19 @@ def ask_zeus(payload: AskRequest):
 
             if any(word in question_words for word in ACTION_WORDS):
                 flow_result = search(raw.get("title", ""))
-
                 if flow_result and flow_result.get("type") == "flow":
                     raw = flow_result["raw"]
                     item_type = "flow"
 
-        # 🔐 Salva contexto já com o tipo correto
-        save_context(item_type, raw)
+        # 🔐 Salva contexto rico
+        save_context(
+            item_type=item_type,
+            raw=raw,
+            system_id=raw.get("system_id") or raw.get("id"),
+            system_title=raw.get("system_title") or raw.get("title"),
+            flow_id=raw.get("id") if item_type == "flow" else None,
+            flow_title=raw.get("title") if item_type == "flow" else None,
+        )
 
         if item_type == "flow":
             answer = render_flow(raw, question)

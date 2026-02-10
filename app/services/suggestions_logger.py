@@ -1,20 +1,57 @@
+"""
+Suggestions Logger — ZEUS
+
+Responsável por:
+- Registrar eventos de fallback e sugestão
+- Gerar observabilidade leve
+- Apoiar evolução do Vault (YAML)
+
+⚠️ Append-only (JSON Lines)
+⚠️ Sem banco
+⚠️ Sem IA
+⚠️ Auditável
+"""
+
 import json
 from pathlib import Path
-from collections import defaultdict
+from datetime import datetime
+from typing import List, Optional
 
-LOG_PATH = Path(__file__).resolve().parent.parent / "data" / "suggestions_log.json"
+from app.services.vault_service import normalize_text
+
+
+# =========================================================
+# 🔹 CONFIGURAÇÃO DO LOG
+# =========================================================
+
+LOG_PATH = Path(__file__).resolve().parent.parent / "data" / "suggestions_log.jsonl"
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
-def log_suggestion(query: str, suggestions: list):
-    data = defaultdict(lambda: defaultdict(int))
+# =========================================================
+# 🔹 API DE LOG
+# =========================================================
 
-    if LOG_PATH.exists():
-        with open(LOG_PATH, "r", encoding="utf-8") as f:
-            data.update(json.load(f))
+def log_suggestion(
+    query: str,
+    suggestions: List[str],
+    intent: str = "suggestion",
+    reason: Optional[str] = None,
+) -> None:
+    """
+    Registra um evento de sugestão ou fallback.
 
-    for suggestion in suggestions:
-        data[query][suggestion] += 1
+    Cada chamada gera uma linha JSON independente.
+    """
 
-    with open(LOG_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    event = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "query": query,
+        "normalized_query": normalize_text(query),
+        "intent": intent,
+        "reason": reason,
+        "suggestions": suggestions,
+    }
+
+    with open(LOG_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps(event, ensure_ascii=False) + "\n")
